@@ -6,10 +6,14 @@ import duckdb
 import requests
 from bs4 import BeautifulSoup
 from dateutil.relativedelta import relativedelta
+from dotenv import load_dotenv
 
 from utilities import Colors
 
+load_dotenv()
+
 DEBUG = False
+GITHUB_TOKEN = os.getenv("github_token")
 
 
 def get_first_publication_date(package_name):
@@ -44,7 +48,7 @@ def get_npm_downloads(package_name):
             - datetime.strptime(start_date, "%Y-%m-%d")
         ).days
         print(
-            f"NPM Downloads: {total_downloads:,} for {days_between:,} days, from {start_date} to {end_date}."
+            f"NPM Downloads: {total_downloads:,} for {days_between:,} days, from {Colors.BRIGHT_BLUE}{start_date}{Colors.RESET} to {Colors.BRIGHT_BLUE}{end_date}{Colors.RESET}."
         )
         return total_downloads
     else:
@@ -97,7 +101,7 @@ def get_pypi_downloads(package_name):
             - datetime.strptime(start_date, "%Y-%m-%d")
         ).days
         print(
-            f"PyPI Downloads: {total_downloads:,} for {days_between:,} days, from {start_date} to {end_date}."
+            f"PyPI Downloads: {total_downloads:,} for {days_between:,} days, from {Colors.BRIGHT_BLUE}{start_date}{Colors.RESET} to {Colors.BRIGHT_BLUE}{end_date}{Colors.RESET}."
         )
         return total_downloads
     else:
@@ -184,7 +188,7 @@ def get_java_downloads(package_name):
             - datetime.strptime(start_date, "%Y-%m")
         ).days
         print(
-            f"Java Construct Downloads: {total_downloads:,} for {days_between:,} days, from {start_date} to {end_date}."
+            f"Java Construct Downloads: {total_downloads:,} for {days_between:,} days, from {Colors.BRIGHT_BLUE}{start_date}{Colors.RESET} to {Colors.BRIGHT_BLUE}{end_date}{Colors.RESET}."
         )
         return total_downloads
     except Exception as e:
@@ -265,7 +269,7 @@ def get_nuget_downloads(package_name):
 
         # Print the formatted statement
         print(
-            f"NuGet Downloads: {total_downloads:,} for {days_between:,} days, from {start_date} to {end_date}."
+            f"NuGet Downloads: {total_downloads:,} for {days_between:,} days, from {Colors.BRIGHT_BLUE}{start_date}{Colors.RESET} to {Colors.BRIGHT_BLUE}{end_date}{Colors.RESET}."
         )
         return total_downloads
     else:
@@ -285,16 +289,60 @@ def get_go_import_count(module_name):
 
     if response.status_code == 200:
         soup = BeautifulSoup(response.content, "html.parser")
-        import_link = soup.find("a", {"aria-label": lambda x: x and "Imports" in x})
-        if import_link:
-            import_count = import_link.text.strip().split(":")[1].strip()
-            return int(import_count)
+        imported_by_span = soup.find("span", {"data-test-id": "UnitHeader-importedby"})
+
+        if imported_by_span:
+            imported_by_link = imported_by_span.find(
+                "a", {"aria-label": lambda x: x and "Imported By" in x}
+            )
+
+            if imported_by_link:
+                # Extract the number of imports from the aria-label
+                imported_by_count = imported_by_link["aria-label"].split(":")[1].strip()
+                return int(imported_by_count)
+            else:
+                print("Could not find the 'Imported By' link on the page.")
+                return None
         else:
-            print("Could not find the Imports information on the page.")
+            print("Could not find the 'Imported By' section on the page.")
             return None
     else:
         print(f"Error fetching the page: {response.status_code}")
         return None
+
+
+def get_github_clone_count(owner, repo):
+    """
+    Fetch the clone count from GitHub using the GitHub API.
+    Requires a GitHub token for authentication.
+    """
+    url = f"https://api.github.com/repos/{owner}/{repo}/traffic/clones"
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+        total_clones = data.get("count", 0)  # Total number of clones
+        unique_clones = data.get("uniques", 0)  # Unique clone count
+        return total_clones, unique_clones
+    else:
+        print(f"Error fetching GitHub clone data: {response.status_code}")
+        return 0, 0
+
+
+def get_go_module_stats(module_name, github_owner, github_repo):
+    go_import_count = get_go_import_count(module_name)
+    total_clones, unique_clones = get_github_clone_count(github_owner, github_repo)
+
+    return {
+        "go_import_count": go_import_count,
+        "total_clones": total_clones,
+        "unique_clones": unique_clones,
+    }
 
 
 constrcut_name = "cdk-comprehend-s3olap"
@@ -302,10 +350,13 @@ npm_downloads = get_npm_downloads(constrcut_name)
 pypi_downloads = get_pypi_downloads(constrcut_name)
 java_downloads = get_java_downloads(constrcut_name)
 nuget_downloads = get_nuget_downloads(constrcut_name)
-go_downlaods = get_go_import_count(f"{constrcut_name}-go")
+go_stats = get_go_module_stats(
+    "cdk-comprehend-s3olap-go", "HsiehShuJeng", "cdk-comprehend-s3olap-go"
+)
+go_downloads = go_stats["go_import_count"] + go_stats["total_clones"]
 
 total_downloads = (
-    npm_downloads + pypi_downloads + java_downloads + nuget_downloads + go_downlaods
+    npm_downloads + pypi_downloads + java_downloads + nuget_downloads + go_downloads
 )
 
 print(
@@ -315,4 +366,4 @@ print(f"\tNPM downloads: {npm_downloads:,}")
 print(f"\tPyPI downloads: {pypi_downloads:,}")
 print(f"\tJava downloads: {java_downloads:,}")
 print(f"\tNuGet downloads: {nuget_downloads:,}")
-print(f"\tGo downloads (imports): {go_downlaods:,}")
+print(f"\tGo downloads (imports): {go_downloads:,}")
