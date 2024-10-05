@@ -1,6 +1,7 @@
 # cdk-constrcuts-stats-calculator
 # Content Table
 * [Brief](#brief)
+* [Stats](#stats)
 * [Notes for Download Count Mechanism](#notes-for-download-count-mechanism)
     * [Java](#java)
     * [NuGET](#nuget)
