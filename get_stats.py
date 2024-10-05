@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime
+from functools import lru_cache
 
 import duckdb
 import requests
@@ -28,7 +29,7 @@ def get_first_publication_date(package_name):
         return "2000-01-01"
 
 
-# npm package download stats
+@lru_cache(maxsize=10)
 def get_npm_downloads(package_name):
     start_date = get_first_publication_date(package_name)
     end_date = datetime.now().strftime("%Y-%m-%d")  # Current date
@@ -63,13 +64,11 @@ def get_first_pypi_release_date(package_name):
         data = response.json()
         releases = data["releases"]
         release_dates = []
-        for version, release_info in releases.items():
-            if release_info:  # Check if the release_info is not empty
-                release_date = release_info[0].get("upload_time")
-                if release_date:
-                    release_dates.append(
-                        datetime.strptime(release_date, "%Y-%m-%dT%H:%M:%S")
-                    )
+        release_dates = [
+            datetime.strptime(release_info[0]["upload_time"], "%Y-%m-%dT%H:%M:%S")
+            for version, release_info in releases.items()
+            if release_info
+        ]
         if release_dates:
             first_release_date = min(release_dates)
             return first_release_date.strftime("%Y-%m-%d")
@@ -346,6 +345,7 @@ def get_go_module_stats(module_name, github_owner, github_repo):
 
 
 constrcut_name = "cdk-comprehend-s3olap"
+print(f"Checking {Colors.BRIGHT_BLUE}{constrcut_name}{Colors.RESET}...")
 npm_downloads = get_npm_downloads(constrcut_name)
 pypi_downloads = get_pypi_downloads(constrcut_name)
 java_downloads = get_java_downloads(constrcut_name)
