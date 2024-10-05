@@ -15,7 +15,7 @@ This is a calculator to get donwload stats for all custom CDK constructs crafted
 4. [cdk-databrew-cicd](https://github.com/HsiehShuJeng/cdk-databrew-cicd)
 5. [projen-statemachine](https://github.com/HsiehShuJeng/projen-simple)
 
-Of course, you can glance at the [Construct Hub](https://constructs.dev/search?q=scott.hsieh&offset=0) also.
+Of course, you can also glance at the [Construct Hub](https://constructs.dev/search?q=scott.hsieh&offset=0). And this stats calculator is developed with assitance by [ChatGPT](https://openai.com/chatgpt/) and [Amazon Q Developer](https://aws.amazon.com/tw/q/developer/).
 
 # Notes for Download Count Mechanism
 ## Java
