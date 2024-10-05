@@ -33,7 +33,9 @@ Of course, you can also glance at the [Construct Hub](https://constructs.dev/sea
 ## Java
 * [Now available: Central download statistics for OSS projects](https://www.sonatype.com/blog/2010/12/now-available-central-download-statistics-for-oss-projects)
 
-Currently, you can only log in to the Sonatype Nexus Repository and view related statistics for your packages on the ‘Central Statistics’ page. To export data, you need to download it in CSV format through the UI, as there is no API available for Java package download stats at this time.  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Currently, you can only log in to the Sonatype Nexus Repository and view related statistics for your packages on the ‘Central Statistics’ page. To export data, you need to download it in CSV format through the UI, as there is no API available for Java package download stats at this time.  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Though you can get a CSV file for the stats of a specific pacakge yet you only get the track of the last year. Therefore, all of the Java constructs are accumuluated by Oct. 1st, 2023. Records starting from `2023.10.01` will be stored on my side.  
+
 > In other words, to get the latest download stats, I still need to download all of CSV files into proper place under this directory before executing `python get_stats.py`.
 
 ## NuGET
