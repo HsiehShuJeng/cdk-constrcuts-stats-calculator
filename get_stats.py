@@ -1,3 +1,29 @@
+"""
+This module calculates download statistics for various packages across different platforms (NPM, PyPI, Java, NuGet, Go).
+
+It defines classes for each package manager (NPM, PyPI, Java, NuGet, Go) to retrieve relevant statistics such as
+first release dates and total downloads. Additionally, it includes functions to compute and format the total 
+downloads for a list of constructs and generates a markdown table summarizing these statistics.
+
+Classes:
+    PackageManager: Base class for managing packages.
+    NpmPackageManager: Class for handling NPM packages.
+    PyPiPackageManager: Class for handling PyPI packages.
+    JavaPackageManager: Class for handling Java Maven packages.
+    NugetPackageManager: Class for handling NuGet packages.
+    GoPackageManager: Class for handling Go modules.
+
+Functions:
+    calculate_total_downloads_for_table: Calculates total downloads for a given construct across multiple platforms.
+    create_markdown_table: Generates a markdown table with download statistics for multiple constructs.
+    main: Main function to calculate and display download statistics for a predefined set of constructs.
+
+This module also supports the following features:
+- Fetching and parsing data from various APIs such as NPM, PyPI, Maven, NuGet, and Go's package registry.
+- Combining Go import statistics with GitHub clone statistics for a more complete view of Go module usage.
+- Caching API responses for efficiency using functools.lru_cache.
+"""
+
 import json
 import os
 import time
@@ -20,11 +46,23 @@ GITHUB_TOKEN = os.getenv("github_token")
 
 
 class PackageManager:
+    """Base class for package managers.
+
+    Args:
+        package_name (str): The name of the package to manage.
+    """
+
     def __init__(self, package_name):
         self.package_name = package_name
 
 
 class NpmPackageManager(PackageManager):
+    """Handles NPM package downloads and metadata retrieval.
+
+    Args:
+        package_name (str): The name of the NPM package to manage.
+    """
+
     def __init__(self, package_name):
         super().__init__(package_name)
         if package_name == "projen-statemachine":
@@ -32,6 +70,11 @@ class NpmPackageManager(PackageManager):
 
     @lru_cache(maxsize=10)
     def get_first_publication_date(self):
+        """Fetches the first publication date of the NPM package.
+
+        Returns:
+            str: The first publication date in 'YYYY-MM-DD' format, or '2000-01-01' if unavailable.
+        """
         url = f"https://registry.npmjs.org/{self.package_name}"
         response = requests.get(url)
         if response.status_code == 200:
@@ -44,6 +87,11 @@ class NpmPackageManager(PackageManager):
 
     @lru_cache(maxsize=10)
     def get_downloads(self):
+        """Fetches the total download count of the NPM package.
+
+        Returns:
+            int: The total number of downloads.
+        """
         start_date = self.get_first_publication_date()
         end_date = datetime.now().strftime("%Y-%m-%d")  # Current date
         url = f"https://api.npmjs.org/downloads/range/{start_date}:{end_date}/{self.package_name}"
@@ -69,6 +117,12 @@ class NpmPackageManager(PackageManager):
 
 
 class PyPiPackageManager(PackageManager):
+    """Handles PyPi package downloads and metadata retrieval.
+
+    Args:
+        package_name (str): The name of the PyPi package to manage.
+    """
+
     def __init__(self, package_name):
         super().__init__(package_name)
         if package_name == "projen-statemachine":
@@ -76,6 +130,11 @@ class PyPiPackageManager(PackageManager):
 
     @lru_cache(maxsize=10)
     def get_first_release_date(self):
+        """Fetches the first release date of the PyPi package.
+
+        Returns:
+            str: The first release date in 'YYYY-MM-DD' format, or '2000-01-01' if unavailable.
+        """
         url = f"https://pypi.org/pypi/{self.package_name}/json"
         response = requests.get(url)
         if response.status_code == 200:
@@ -97,6 +156,11 @@ class PyPiPackageManager(PackageManager):
             return "2000-01-01"
 
     def get_downloads(self):
+        """Fetches the total download count of the PyPi package.
+
+        Returns:
+            int: The total number of downloads.
+        """
         start_date = self.get_first_release_date()
         end_date = datetime.now().strftime("%Y-%m-%d")  # Current date
 
@@ -124,7 +188,14 @@ class PyPiPackageManager(PackageManager):
 
 
 class JavaPackageManager(PackageManager):
+    """Handles Java Maven package downloads and metadata retrieval.
+
+    Args:
+        package_name (str): The name of the Java Maven package to manage.
+    """
+
     def handle_maven_stats(self):
+        """Processes and updates Maven statistics for the Java package."""
         csv_file = f"maven-stats-source/{self.package_name}.csv"
         parquet_file = f"maven-stats-source/accumulation/{self.package_name}.parquet"
         transformed_table = "updated_stats"
@@ -162,6 +233,11 @@ class JavaPackageManager(PackageManager):
             )
 
     def get_downloads(self):
+        """Fetches the total download count of the Java Maven package.
+
+        Returns:
+            int: The total number of downloads.
+        """
         self.handle_maven_stats()
         parquet_file = f"maven-stats-source/accumulation/{self.package_name}.parquet"
         if not os.path.exists(parquet_file):
@@ -192,17 +268,39 @@ class JavaPackageManager(PackageManager):
 
 
 class NugetPackageManager(PackageManager):
+    """Handles NuGet package downloads and metadata retrieval.
+
+    Args:
+        package_name (str): The name of the NuGet package to manage.
+    """
+
     def __init__(self, package_name):
         super().__init__(package_name)
         self.dotnet_package_name = self._transform_package_name(package_name)
 
     def _transform_package_name(self, package_name):
+        """Transforms package name into a dot-separated .NET format.
+
+        Args:
+            package_name (str): The original package name with hyphens.
+
+        Returns:
+            str: The transformed package name in .NET convention.
+        """
         parts = package_name.split("-")
         transformed_parts = [part.capitalize() for part in parts if part != "cdk"]
         transformed_name = ".".join(transformed_parts)
         return transformed_name
 
     def _convert_download_count(self, download_string):
+        """Converts a formatted download count string (e.g., '132.2K') into an integer.
+
+        Args:
+            download_string (str): The download count string from NuGet.
+
+        Returns:
+            int: The converted download count as an integer.
+        """
         """Convert formatted download strings like '132.2K' to actual numbers."""
         if "K" in download_string:
             return int(float(download_string.replace("K", "")) * 1000)
@@ -213,6 +311,11 @@ class NugetPackageManager(PackageManager):
 
     @lru_cache(maxsize=10)
     def get_earliest_date(self):
+        """Retrieves the earliest release date of the NuGet package.
+
+        Returns:
+            str: The earliest release date in 'YYYY-MM-DD' format, or None if not found.
+        """
         url = f"https://www.nuget.org/packages/{self.dotnet_package_name}/0.0.0"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -243,6 +346,11 @@ class NugetPackageManager(PackageManager):
             return None
 
     def get_downloads(self):
+        """Fetches the total download count of the NuGet package.
+
+        Returns:
+            int: The total number of downloads, or 0 if an error occurs.
+        """
         start_date = self.get_earliest_date()
         if not start_date:
             return 0
@@ -270,6 +378,12 @@ class NugetPackageManager(PackageManager):
 
 
 class GoPackageManager(PackageManager):
+    """Handles Go package statistics like imports and GitHub clones.
+
+    Args:
+        package_name (str): The name of the Go package to manage.
+    """
+
     def __init__(self, package_name):
         super().__init__(package_name)
         self.module_name = package_name
@@ -280,6 +394,11 @@ class GoPackageManager(PackageManager):
             self.package_name = self.package_name[:-2]
 
     def get_import_count(self):
+        """Retrieves the Go module import count from pkg.go.dev.
+
+        Returns:
+            int or None: The number of times the module has been imported, or None if not found.
+        """
         module_url = f"https://pkg.go.dev/github.com/HsiehShuJeng/{self.module_name}/{self.package_name}/v2/jsii"
         if DEBUG:
             print(f"module_url: {module_url}")
@@ -312,6 +431,15 @@ class GoPackageManager(PackageManager):
             return None
 
     def get_github_clone_count(self, github_owner, github_repo):
+        """Fetches GitHub clone statistics for the Go package repository.
+
+        Args:
+            github_owner (str): GitHub repository owner.
+            github_repo (str): GitHub repository name.
+
+        Returns:
+            tuple: A tuple containing total clone count and unique clone count.
+        """
         url = (
             f"https://api.github.com/repos/{github_owner}/{github_repo}/traffic/clones"
         )
@@ -332,6 +460,15 @@ class GoPackageManager(PackageManager):
             return 0, 0
 
     def get_module_stats(self, github_owner, github_repo):
+        """Combines Go import and GitHub clone statistics.
+
+        Args:
+            github_owner (str): GitHub repository owner.
+            github_repo (str): GitHub repository name.
+
+        Returns:
+            dict: A dictionary containing Go import count, total GitHub clones, and unique GitHub clones.
+        """
         go_import_count = self.get_import_count()
         total_clones, unique_clones = self.get_github_clone_count(
             github_owner, github_repo
@@ -356,6 +493,18 @@ class GoPackageManager(PackageManager):
 
 
 def calculate_total_downloads_for_table(construct_name):
+    """Calculates total downloads for a given construct across multiple platforms.
+
+    This function fetches download statistics for NPM, PyPI, Java, NuGet, and Go platforms
+    using their respective package managers, then computes the total downloads for each construct.
+
+    Args:
+        construct_name (str): The name of the construct whose download statistics need to be calculated.
+
+    Returns:
+        tuple: A dictionary containing total downloads and individual platform downloads,
+               and the time taken for the calculation.
+    """
     start_time = time.time()
     print(f"Checking {Colors.BRIGHT_BLUE}{construct_name}{Colors.RESET}...")
 
@@ -402,6 +551,18 @@ def calculate_total_downloads_for_table(construct_name):
 
 
 def create_markdown_table(constructs, total_downloads_data):
+    """Generates a markdown table showing download statistics across different constructs.
+
+    This function creates a markdown-formatted table displaying the downloads across
+    five platforms (NPM, PyPI, Java, NuGet, Go) for each construct and calculates the totals.
+
+    Args:
+        constructs (list of str): The list of construct names.
+        total_downloads_data (dict): The dictionary containing download data for each construct.
+
+    Returns:
+        None: Copies the generated markdown table to the clipboard.
+    """
     # Generate table header
     markdown_table = (
         "| Construct                 | " + " | ".join(constructs) + " | **Total** |\n"
@@ -440,6 +601,14 @@ def create_markdown_table(constructs, total_downloads_data):
 
 
 def main():
+    """Main function that calculates total downloads for each construct and generates a markdown table.
+
+    This function iterates over a list of constructs, calculates the download statistics for each,
+    and creates a markdown table showing the results. It also prints the total time taken for the operation.
+
+    Returns:
+        None
+    """
     constructs = [
         "cdk-comprehend-s3olap",
         "cdk-lambda-subminute",
