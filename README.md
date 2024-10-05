@@ -10,7 +10,7 @@ Currently, you can only log in to the Sonatype Nexus Repository and view related
 # NuGET
 * [NuGet Server API](https://learn.microsoft.com/en-us/nuget/api/overview)
 * [Pacakge metadata](https://learn.microsoft.com/en-us/nuget/api/registration-base-url-resource)
-
+* [Sonatype repository manager](https://s01.oss.sonatype.org/)
 
 # Go
 * [Github: Can I see the number of downloads for a repo?](https://stackoverflow.com/questions/4338358/github-can-i-see-the-number-of-downloads-for-a-repo)

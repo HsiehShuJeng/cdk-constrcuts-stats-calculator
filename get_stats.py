@@ -23,6 +23,11 @@ class PackageManager:
 
 
 class NpmPackageManager(PackageManager):
+    def __init__(self, package_name):
+        super().__init__(package_name)
+        if package_name == "projen-statemachine":
+            self.package_name = "projen-statemachine-example"
+
     def get_first_publication_date(self):
         url = f"https://registry.npmjs.org/{self.package_name}"
         response = requests.get(url)
@@ -61,6 +66,11 @@ class NpmPackageManager(PackageManager):
 
 
 class PyPiPackageManager(PackageManager):
+    def __init__(self, package_name):
+        super().__init__(package_name)
+        if package_name == "projen-statemachine":
+            self.package_name = f"scotthsieh-{package_name}"
+
     def get_first_release_date(self):
         url = f"https://pypi.org/pypi/{self.package_name}/json"
         response = requests.get(url)
@@ -255,11 +265,17 @@ class NugetPackageManager(PackageManager):
 
 
 class GoPackageManager(PackageManager):
+    def __init__(self, package_name):
+        super().__init__(package_name)
+        self.module_name = package_name
+        if package_name == "projen-statemachine-go":
+            self.package_name = "projen-statemachine-example"
+        self.package_name = self.package_name.replace("-", "")
+        if self.package_name.endswith("go"):
+            self.package_name = self.package_name[:-2]
+
     def get_import_count(self):
-        package_name = self.package_name.replace("-", "")
-        if package_name.endswith("go"):
-            package_name = package_name[:-2]
-        module_url = f"https://pkg.go.dev/github.com/HsiehShuJeng/{self.package_name}/{package_name}/v2/jsii"
+        module_url = f"https://pkg.go.dev/github.com/HsiehShuJeng/{self.module_name}/{self.package_name}/v2/jsii"
         if DEBUG:
             print(f"module_url: {module_url}")
         response = requests.get(module_url)
@@ -315,6 +331,17 @@ class GoPackageManager(PackageManager):
         total_clones, unique_clones = self.get_github_clone_count(
             github_owner, github_repo
         )
+        if DEBUG:
+            print(
+                json.dumps(
+                    {
+                        "go_import_count": go_import_count,
+                        "total_clones": total_clones,
+                        "unique_clones": unique_clones,
+                    },
+                    indent=4,
+                )
+            )
 
         return {
             "go_import_count": go_import_count,
@@ -323,32 +350,49 @@ class GoPackageManager(PackageManager):
         }
 
 
-# Example usage:
-npm_manager = NpmPackageManager("cdk-comprehend-s3olap")
-npm_downloads = npm_manager.get_downloads()
+def calculate_total_downalods(construct_name):
+    print(f"Checking {Colors.BRIGHT_BLUE}{construct_name}{Colors.RESET}...")
+    npm_manager = NpmPackageManager(construct_name)
+    npm_downloads = npm_manager.get_downloads()
 
-pypi_manager = PyPiPackageManager("cdk-comprehend-s3olap")
-pypi_downloads = pypi_manager.get_downloads()
+    pypi_manager = PyPiPackageManager(construct_name)
+    pypi_downloads = pypi_manager.get_downloads()
 
-java_manager = JavaPackageManager("cdk-comprehend-s3olap")
-java_downloads = java_manager.get_downloads()
+    java_manager = JavaPackageManager(construct_name)
+    java_downloads = java_manager.get_downloads()
 
-nuget_manager = NugetPackageManager("cdk-comprehend-s3olap")
-nuget_downloads = nuget_manager.get_downloads()
+    nuget_manager = NugetPackageManager(construct_name)
+    nuget_downloads = nuget_manager.get_downloads()
 
-go_manager = GoPackageManager("cdk-comprehend-s3olap-go")
-go_stats = go_manager.get_module_stats("HsiehShuJeng", "cdk-comprehend-s3olap-go")
-go_downloads = go_stats["go_import_count"] + go_stats["total_clones"]
+    go_manager = GoPackageManager(f"{construct_name}-go")
+    go_stats = go_manager.get_module_stats("HsiehShuJeng", f"{construct_name}-go")
+    go_downloads = go_stats["go_import_count"] + go_stats["total_clones"]
 
-total_downloads = (
-    npm_downloads + pypi_downloads + java_downloads + nuget_downloads + go_downloads
-)
+    total_downloads = (
+        npm_downloads + pypi_downloads + java_downloads + nuget_downloads + go_downloads
+    )
 
-print(
-    f"There are {Colors.GREEN}{total_downloads:,}{Colors.RESET} for {Colors.GREEN}{npm_manager.package_name}{Colors.RESET}, including 5 programming languages."
-)
-print(f"\tNPM downloads: {npm_downloads:,}")
-print(f"\tPyPI downloads: {pypi_downloads:,}")
-print(f"\tJava downloads: {java_downloads:,}")
-print(f"\tNuGet downloads: {nuget_downloads:,}")
-print(f"\tGo downloads (imports): {go_downloads:,}")
+    print(
+        f"There are {Colors.GREEN}{total_downloads:,}{Colors.RESET} for {Colors.GREEN}{npm_manager.package_name}{Colors.RESET}, including 5 programming languages."
+    )
+    print(f"\tNPM downloads: {npm_downloads:,}")
+    print(f"\tPyPI downloads: {pypi_downloads:,}")
+    print(f"\tJava downloads: {java_downloads:,}")
+    print(f"\tNuGet downloads: {nuget_downloads:,}")
+    print(f"\tGo downloads (imports): {go_downloads:,}")
+
+
+def main():
+    constrcuts = [
+        "cdk-comprehend-s3olap",
+        "cdk-lambda-subminute",
+        "cdk-emrserverless-with-delta-lake",
+        "cdk-databrew-cicd",
+        "projen-statemachine",
+    ]
+    for custom_construct in constrcuts:
+        calculate_total_downalods(custom_construct)
+
+
+if __name__ == "__main__":
+    main()
