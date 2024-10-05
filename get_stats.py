@@ -28,6 +28,7 @@ class NpmPackageManager(PackageManager):
         if package_name == "projen-statemachine":
             self.package_name = "projen-statemachine-example"
 
+    @lru_cache(maxsize=10)
     def get_first_publication_date(self):
         url = f"https://registry.npmjs.org/{self.package_name}"
         response = requests.get(url)
@@ -71,6 +72,7 @@ class PyPiPackageManager(PackageManager):
         if package_name == "projen-statemachine":
             self.package_name = f"scotthsieh-{package_name}"
 
+    @lru_cache(maxsize=10)
     def get_first_release_date(self):
         url = f"https://pypi.org/pypi/{self.package_name}/json"
         response = requests.get(url)
@@ -207,6 +209,7 @@ class NugetPackageManager(PackageManager):
         else:
             return int(download_string)
 
+    @lru_cache(maxsize=10)
     def get_earliest_date(self):
         url = f"https://www.nuget.org/packages/{self.dotnet_package_name}/0.0.0"
         headers = {
