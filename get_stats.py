@@ -4,6 +4,7 @@ from datetime import datetime
 
 import duckdb
 import requests
+from bs4 import BeautifulSoup
 from dateutil.relativedelta import relativedelta
 
 DEBUG = False
@@ -205,12 +206,95 @@ def get_java_construct_downloads(package_name):
         return 0
 
 
+def get_nuget_earliest_date(package_name):
+    url = f"https://www.nuget.org/packages/{package_name}/0.0.0"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content, "html.parser")
+        sidebar_sections = soup.find_all("div", class_="sidebar-section")
+
+        for section in sidebar_sections:
+            header = section.find("div", class_="sidebar-headers")
+            if header and "About" in header.get_text():
+                date_tag = section.find("span", {"data-datetime": True})
+                if date_tag:
+                    earliest_upload = date_tag["data-datetime"]
+                    return earliest_upload.split("T")[0]  # Return only the date part
+                else:
+                    print("Could not find a span with 'data-datetime' attribute.")
+                    return None
+
+        # If no matching 'About' section is found
+        print("'About' section not found in any 'sidebar-section'.")
+        return None
+    else:
+        print(f"Error fetching NuGet package page: {response.status_code}")
+        return None
+
+
+def get_nuget_downloads(package_name):
+    def convert_download_count(download_string):
+        """Convert formatted download strings like '132.2K' to actual numbers."""
+        if "K" in download_string:
+            return int(float(download_string.replace("K", "")) * 1000)
+        elif "M" in download_string:
+            return int(float(download_string.replace("M", "")) * 1000000)
+        else:
+            return int(download_string)  # For values without K or M
+
+    def transform_package_name(package_name):
+        parts = package_name.split("-")
+        transformed_parts = [part.capitalize() for part in parts if part != "cdk"]
+        transformed_name = ".".join(transformed_parts)
+        return transformed_name
+
+    # Fetch NuGet package metadata
+    dotnet_package_name = transform_package_name(package_name)
+    if DEBUG:
+        print(f"Transformed NuGet package name: {dotnet_package_name}")
+
+    url = f"https://www.nuget.org/packages/{dotnet_package_name}/"
+    response = requests.get(url)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content, "html.parser")
+
+        total_downloads = soup.find("span", class_="download-info-content").text.strip()
+        total_downloads = convert_download_count(total_downloads)
+
+        # Define a start date manually or scrape if available
+        start_date = get_nuget_earliest_date(dotnet_package_name)
+        if DEBUG:
+            print(f"start_date: {start_date}")
+        end_date = datetime.now().strftime("%Y-%m-%d")
+
+        # Calculate the number of days between start and end date
+        days_between = (
+            datetime.strptime(end_date, "%Y-%m-%d")
+            - datetime.strptime(start_date, "%Y-%m-%d")
+        ).days
+
+        # Print the formatted statement
+        print(
+            f"NuGet Downloads: {total_downloads:,} for {days_between:,} days, from {start_date} to {end_date}."
+        )
+        return total_downloads
+    else:
+        print(f"Error fetching NuGet data: {response.status_code}")
+        return 0
+
+
 npm_downloads = get_npm_downloads("cdk-comprehend-s3olap")
 pypi_downloads = get_pypi_downloads("cdk-comprehend-s3olap")
 java_downloads = get_java_construct_downloads("cdk-comprehend-s3olap")
+nuget_downloads = get_nuget_downloads("cdk-comprehend-s3olap")
 github_downloads = get_github_downloads("HsiehShuJeng", "cdk-comprehend-s3olap-go")
 
 print(f"NPM Downloads: {npm_downloads}")
 print(f"PyPI Downloads: {pypi_downloads}")
 print(f"Java Downloads: {java_downloads}")
+print(f"NuGet Downloads: {nuget_downloads}")
 print(f"GitHub Downloads: {github_downloads}")
