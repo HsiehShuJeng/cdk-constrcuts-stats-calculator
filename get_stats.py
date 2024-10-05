@@ -1,9 +1,11 @@
 import json
 import os
+import time
 from datetime import datetime
 from functools import lru_cache
 
 import duckdb
+import pyperclip
 import requests
 from bs4 import BeautifulSoup
 from dateutil.relativedelta import relativedelta
@@ -353,8 +355,11 @@ class GoPackageManager(PackageManager):
         }
 
 
-def calculate_total_downalods(construct_name):
+def calculate_total_downloads_for_table(construct_name):
+    start_time = time.time()
     print(f"Checking {Colors.BRIGHT_BLUE}{construct_name}{Colors.RESET}...")
+
+    # Initialize managers and fetch stats for each platform
     npm_manager = NpmPackageManager(construct_name)
     npm_downloads = npm_manager.get_downloads()
 
@@ -374,7 +379,6 @@ def calculate_total_downalods(construct_name):
     total_downloads = (
         npm_downloads + pypi_downloads + java_downloads + nuget_downloads + go_downloads
     )
-
     print(
         f"There are {Colors.GREEN}{total_downloads:,}{Colors.RESET} for {Colors.GREEN}{npm_manager.package_name}{Colors.RESET}, including 5 programming languages."
     )
@@ -383,22 +387,80 @@ def calculate_total_downalods(construct_name):
     print(f"\tJava downloads: {java_downloads:,}")
     print(f"\tNuGet downloads: {nuget_downloads:,}")
     print(f"\tGo downloads (imports): {go_downloads:,}")
-    return total_downloads
+    end_time = time.time()
+    total_time = end_time - start_time
+    print(f"Time taken for {construct_name}: {total_time:.2f} seconds")
+
+    return {
+        "total": total_downloads,
+        "npm": npm_downloads,
+        "pypi": pypi_downloads,
+        "java": java_downloads,
+        "nuget": nuget_downloads,
+        "go": go_downloads,
+    }, total_time
+
+
+def create_markdown_table(constructs, total_downloads_data):
+    # Generate table header
+    markdown_table = (
+        "| Construct                 | " + " | ".join(constructs) + " | **Total** |\n"
+    )
+    markdown_table += (
+        "|---------------------------|"
+        + "-----------------------|" * len(constructs)
+        + "---------|\n"
+    )
+
+    # Extract and add downloads per platform, with a row-wise total formatted with commas
+    platforms = ["NPM", "PyPI", "Java", "NuGet", "Go"]
+    for platform in platforms:
+        platform_row = [
+            f"{total_downloads_data[c][platform.lower()]:,}" for c in constructs
+        ]
+        row_total = sum([total_downloads_data[c][platform.lower()] for c in constructs])
+        markdown_table += (
+            f"| **{platform}**               | "
+            + " | ".join(platform_row)
+            + f" | {row_total:,} |\n"
+        )
+
+    # Add total downloads row as the last row
+    markdown_table += (
+        "| **Total**                 | "
+        + " | ".join([f"{total_downloads_data[c]['total']:,}" for c in constructs])
+        + " | "
+        + f"{sum([total_downloads_data[c]['total'] for c in constructs]):,}"
+        + " |\n"
+    )
+
+    # Copy the markdown table to clipboard
+    pyperclip.copy(markdown_table)
+    print("The markdown table has been copied to the clipboard.")
 
 
 def main():
-    constrcuts = [
+    constructs = [
         "cdk-comprehend-s3olap",
         "cdk-lambda-subminute",
         "cdk-emrserverless-with-delta-lake",
         "cdk-databrew-cicd",
         "projen-statemachine",
     ]
-    total_downloads = 0
-    for custom_construct in constrcuts:
-        total_downloads += calculate_total_downalods(custom_construct)
+    total_downloads_data = {}
+    total_elapsed_time = 0
+    for custom_construct in constructs:
+        total_downloads_data[custom_construct], elapsed_time = (
+            calculate_total_downloads_for_table(custom_construct)
+        )
+        total_elapsed_time += elapsed_time
     print(
-        f"{Colors.BRIGHT_YELLOW}Total downloads{Colors.RESET} for {Colors.BRIGHT_YELLOW}{len(constrcuts):,}{Colors.RESET} constructs are {Colors.BRIGHT_YELLOW}{total_downloads:,}{Colors.RESET}."
+        f"Total time taken for {len(constructs):,} constrcuts: {total_elapsed_time:.2f}."
+    )
+    total_downloads = sum(data["total"] for data in total_downloads_data.values())
+    create_markdown_table(constructs, total_downloads_data)
+    print(
+        f"{Colors.BRIGHT_YELLOW}Total downloads{Colors.RESET} for {Colors.BRIGHT_YELLOW}{len(constructs):,}{Colors.RESET} constructs are {Colors.BRIGHT_YELLOW}{total_downloads:,}{Colors.RESET}."
     )
 
 

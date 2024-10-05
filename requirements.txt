@@ -2,3 +2,4 @@ selenium
 python-dotenv
 duckdb
 beautifulsoup4
+pyperclip

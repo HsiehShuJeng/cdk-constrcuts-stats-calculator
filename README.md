@@ -17,6 +17,17 @@ This is a calculator to get donwload stats for all custom CDK constructs crafted
 
 Of course, you can also glance at the [Construct Hub](https://constructs.dev/search?q=scott.hsieh&offset=0). And this stats calculator is developed with assitance by [ChatGPT](https://openai.com/chatgpt/) and [Amazon Q Developer](https://aws.amazon.com/tw/q/developer/).
 
+
+# Stats
+| Construct                 | cdk-comprehend-s3olap | cdk-lambda-subminute | cdk-emrserverless-with-delta-lake | cdk-databrew-cicd | projen-statemachine | **Total** |
+|---------------------------|-----------------------|-----------------------|-----------------------|-----------------------|-----------------------|---------|
+| **NPM**               | 262,446 | 195,637 | 115,529 | 64,279 | 81,805 | 719,696 |
+| **PyPI**               | 478,205 | 516,727 | 498,361 | 503,844 | 414,554 | 2,411,691 |
+| **Java**               | 51,241 | 54,997 | 71,587 | 60,393 | 73,626 | 311,844 |
+| **NuGet**               | 132,200 | 128,900 | 113,600 | 114,600 | 129,600 | 618,900 |
+| **Go**               | 2 | 1 | 4 | 1 | 1 | 9 |
+| **Total**                 | 924,094 | 896,262 | 799,081 | 743,117 | 699,586 | 4,062,140 |
+
 # Notes for Download Count Mechanism
 ## Java
 * [Now available: Central download statistics for OSS projects](https://www.sonatype.com/blog/2010/12/now-available-central-download-statistics-for-oss-projects)
