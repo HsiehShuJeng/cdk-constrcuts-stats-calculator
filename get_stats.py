@@ -7,7 +7,9 @@ import requests
 from bs4 import BeautifulSoup
 from dateutil.relativedelta import relativedelta
 
-DEBUG = True
+from utilities import Colors
+
+DEBUG = False
 
 
 def get_first_publication_date(package_name):
@@ -155,7 +157,7 @@ def handle_maven_stats(package_name):
         )
 
 
-def get_java_construct_downloads(package_name):
+def get_java_downloads(package_name):
     handle_maven_stats("cdk-comprehend-s3olap")
     parquet_file = f"maven-stats-source/accumulation/{package_name}.parquet"
 
@@ -276,7 +278,6 @@ def get_go_import_count(module_name):
     package_name = module_name.replace("-", "")
     if package_name.endswith("go"):
         package_name = package_name[:-2]
-    ## https://pkg.go.dev/github.com/HsiehShuJeng/cdk-comprehend-s3olap-go/cdkcomprehends3olap/v2/jsii
     module_url = f"https://pkg.go.dev/github.com/HsiehShuJeng/{module_name}/{package_name}/v2/jsii"
     if DEBUG:
         print(f"module_url: {module_url}")
@@ -296,14 +297,22 @@ def get_go_import_count(module_name):
         return None
 
 
-npm_downloads = get_npm_downloads("cdk-comprehend-s3olap")
-pypi_downloads = get_pypi_downloads("cdk-comprehend-s3olap")
-java_downloads = get_java_construct_downloads("cdk-comprehend-s3olap")
-nuget_downloads = get_nuget_downloads("cdk-comprehend-s3olap")
-go_downlaods = get_go_import_count("cdk-comprehend-s3olap-go")
+constrcut_name = "cdk-comprehend-s3olap"
+npm_downloads = get_npm_downloads(constrcut_name)
+pypi_downloads = get_pypi_downloads(constrcut_name)
+java_downloads = get_java_downloads(constrcut_name)
+nuget_downloads = get_nuget_downloads(constrcut_name)
+go_downlaods = get_go_import_count(f"{constrcut_name}-go")
 
-print(f"NPM Downloads: {npm_downloads}")
-print(f"PyPI Downloads: {pypi_downloads}")
-print(f"Java Downloads: {java_downloads}")
-print(f"NuGet Downloads: {nuget_downloads}")
-print(f"Go Downloads: {go_downlaods}")
+total_downloads = (
+    npm_downloads + pypi_downloads + java_downloads + nuget_downloads + go_downlaods
+)
+
+print(
+    f"There are {Colors.GREEN}{total_downloads:,}{Colors.RESET} for {Colors.GREEN}{constrcut_name}{Colors.RESET}, including 5 programming languages."
+)
+print(f"\tNPM downloads: {npm_downloads:,}")
+print(f"\tPyPI downloads: {pypi_downloads:,}")
+print(f"\tJava downloads: {java_downloads:,}")
+print(f"\tNuGet downloads: {nuget_downloads:,}")
+print(f"\tGo downloads (imports): {go_downlaods:,}")
