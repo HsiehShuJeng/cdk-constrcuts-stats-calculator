@@ -1,7 +1,10 @@
 import json
+import os
 from datetime import datetime
 
+import duckdb
 import requests
+from dateutil.relativedelta import relativedelta
 
 DEBUG = False
 
@@ -115,10 +118,99 @@ def get_github_downloads(repo_owner, repo_name):
     return 0
 
 
+def handle_maven_stats(package_name):
+    csv_file = f"maven-stats-source/{package_name}.csv"
+    parquet_file = f"maven-stats-source/accumulation/{package_name}.parquet"
+    transformed_table = "updated_stats"
+    parquet_table = "existing_stats"
+    export_date = datetime.now()
+    start_month = export_date - relativedelta(years=1)
+    start_month_str = start_month.strftime("%Y-%m-%d")
+    conn = duckdb.connect(database=":memory:")
+
+    conn.sql(
+        f"""
+        CREATE TABLE {transformed_table} AS 
+        SELECT column0 AS downloads, 
+               strftime(DATE '{start_month_str}' + INTERVAL (ROW_NUMBER() OVER () - 1) MONTH, '%Y-%m') AS year_month
+        FROM read_csv_auto('{csv_file}', header=False);
+    """
+    )
+    if DEBUG:
+        conn.sql(f"SELECT * FROM {transformed_table}").show()
+
+    if os.path.exists(parquet_file):
+        # If the Parquet file exists, load the existing data
+        conn.sql(
+            f"CREATE TABLE {parquet_table} AS SELECT * FROM read_parquet('{parquet_file}')"
+        )
+
+        conn.sql(
+            f"""
+            DELETE FROM {parquet_table}
+            WHERE year_month IN (SELECT year_month FROM {transformed_table})
+            """
+        )
+
+        conn.sql(
+            f"""
+            INSERT INTO {parquet_table}
+            SELECT * FROM {transformed_table}
+            """
+        )
+
+        # Export to compressed Parquet
+        conn.sql(
+            f"COPY (SELECT * FROM {parquet_table}) TO '{parquet_file}' (FORMAT 'PARQUET', CODEC 'ZSTD')"
+        )
+    else:
+        # If the Parquet file does not exist, create it
+        conn.sql(
+            f"COPY (SELECT * FROM {transformed_table}) TO '{parquet_file}' (FORMAT 'PARQUET', CODEC 'ZSTD')"
+        )
+
+
+def get_java_construct_downloads(package_name):
+    handle_maven_stats("cdk-comprehend-s3olap")
+    parquet_file = f"maven-stats-source/accumulation/{package_name}.parquet"
+
+    if not os.path.exists(parquet_file):
+        print(f"Parquet file for {package_name} not found.")
+        return 0
+
+    conn = duckdb.connect(database=":memory:")
+    try:
+        result = conn.sql(
+            f"""
+            SELECT SUM(downloads) AS total_downloads, 
+                   MIN(year_month) AS start_date 
+            FROM read_parquet('{parquet_file}')
+        """
+        ).fetchone()
+        total_downloads, start_date = result if result else (0, None)
+        if start_date is None:
+            print("No valid start date found.")
+            return 0
+        end_date = datetime.now().strftime("%Y-%m-%d")
+        days_between = (
+            datetime.strptime(end_date, "%Y-%m-%d")
+            - datetime.strptime(start_date, "%Y-%m")
+        ).days
+        print(
+            f"Java Construct Downloads: {total_downloads:,} for {days_between:,} days, from {start_date} to {end_date}."
+        )
+        return total_downloads
+    except Exception as e:
+        print(f"Error while fetching Java construct downloads: {e}")
+        return 0
+
+
 npm_downloads = get_npm_downloads("cdk-comprehend-s3olap")
 pypi_downloads = get_pypi_downloads("cdk-comprehend-s3olap")
+java_downloads = get_java_construct_downloads("cdk-comprehend-s3olap")
 github_downloads = get_github_downloads("HsiehShuJeng", "cdk-comprehend-s3olap-go")
 
 print(f"NPM Downloads: {npm_downloads}")
 print(f"PyPI Downloads: {pypi_downloads}")
+print(f"Java Downloads: {java_downloads}")
 print(f"GitHub Downloads: {github_downloads}")
