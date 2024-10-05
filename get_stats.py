@@ -380,6 +380,7 @@ def calculate_total_downalods(construct_name):
     print(f"\tJava downloads: {java_downloads:,}")
     print(f"\tNuGet downloads: {nuget_downloads:,}")
     print(f"\tGo downloads (imports): {go_downloads:,}")
+    return total_downloads
 
 
 def main():
@@ -390,8 +391,12 @@ def main():
         "cdk-databrew-cicd",
         "projen-statemachine",
     ]
+    total_downloads = 0
     for custom_construct in constrcuts:
-        calculate_total_downalods(custom_construct)
+        total_downloads += calculate_total_downalods(custom_construct)
+    print(
+        f"{Colors.BRIGHT_YELLOW}Total downloads{Colors.RESET} for {Colors.BRIGHT_YELLOW}{len(constrcuts):,}{Colors.RESET} constructs are {Colors.BRIGHT_YELLOW}{total_downloads:,}{Colors.RESET}."
+    )
 
 
 if __name__ == "__main__":
