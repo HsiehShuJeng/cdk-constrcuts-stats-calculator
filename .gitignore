@@ -1,3 +1,4 @@
 .env
 maven-stats-source
 .DS_Store
+__pycache__
