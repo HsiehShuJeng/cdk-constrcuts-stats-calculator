@@ -7,7 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 from dateutil.relativedelta import relativedelta
 
-DEBUG = False
+DEBUG = True
 
 
 def get_first_publication_date(package_name):
@@ -101,22 +101,6 @@ def get_pypi_downloads(package_name):
     else:
         print(f"Error fetching download data: {response.status_code}")
         return 0
-
-
-# GitHub release download stats
-def get_github_downloads(repo_owner, repo_name):
-    url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases"
-    response = requests.get(url)
-    if response.status_code == 200:
-        releases = response.json()
-        print()
-        download_count = sum(
-            asset["download_count"]
-            for release in releases
-            for asset in release["assets"]
-        )
-        return download_count
-    return 0
 
 
 def handle_maven_stats(package_name):
@@ -287,14 +271,39 @@ def get_nuget_downloads(package_name):
         return 0
 
 
+def get_go_import_count(module_name):
+    # Fetch the page content
+    package_name = module_name.replace("-", "")
+    if package_name.endswith("go"):
+        package_name = package_name[:-2]
+    ## https://pkg.go.dev/github.com/HsiehShuJeng/cdk-comprehend-s3olap-go/cdkcomprehends3olap/v2/jsii
+    module_url = f"https://pkg.go.dev/github.com/HsiehShuJeng/{module_name}/{package_name}/v2/jsii"
+    if DEBUG:
+        print(f"module_url: {module_url}")
+    response = requests.get(module_url)
+
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content, "html.parser")
+        import_link = soup.find("a", {"aria-label": lambda x: x and "Imports" in x})
+        if import_link:
+            import_count = import_link.text.strip().split(":")[1].strip()
+            return int(import_count)
+        else:
+            print("Could not find the Imports information on the page.")
+            return None
+    else:
+        print(f"Error fetching the page: {response.status_code}")
+        return None
+
+
 npm_downloads = get_npm_downloads("cdk-comprehend-s3olap")
 pypi_downloads = get_pypi_downloads("cdk-comprehend-s3olap")
 java_downloads = get_java_construct_downloads("cdk-comprehend-s3olap")
 nuget_downloads = get_nuget_downloads("cdk-comprehend-s3olap")
-github_downloads = get_github_downloads("HsiehShuJeng", "cdk-comprehend-s3olap-go")
+go_downlaods = get_go_import_count("cdk-comprehend-s3olap-go")
 
 print(f"NPM Downloads: {npm_downloads}")
 print(f"PyPI Downloads: {pypi_downloads}")
 print(f"Java Downloads: {java_downloads}")
 print(f"NuGet Downloads: {nuget_downloads}")
-print(f"GitHub Downloads: {github_downloads}")
+print(f"Go Downloads: {go_downlaods}")
