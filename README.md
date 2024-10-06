@@ -2,6 +2,7 @@
 # Content Table
 * [Brief](#brief)
 * [Stats](#stats)
+* [Current Calculation Flow](#current-calculation-flow)
 * [Notes for Download Count Mechanism](#notes-for-download-count-mechanism)
     * [Java](#java)
     * [NuGET](#nuget)
@@ -29,6 +30,9 @@ Of course, you can also glance at the [Construct Hub](https://constructs.dev/sea
 | **Go**               | 2 | 1 | 4 | 1 | 1 | 9 |
 | **Total**                 | 924,094 | 896,262 | 799,081 | 743,117 | 699,586 | 4,062,140 |
 
+# Current Calculation Flow
+![Current Automation Flow](/images/Current%20Automation%20Flow.jpg)
+
 # Notes for Download Count Mechanism
 ## Java
 * [Now available: Central download statistics for OSS projects](https://www.sonatype.com/blog/2010/12/now-available-central-download-statistics-for-oss-projects)
@@ -55,3 +59,5 @@ Further investigation is needed on the implementation of the [maven_stats.py](./
 There are some click actions in the script that still need to be verified and fine-tuned to work smoothly in Selenium. These click interactions, particularly for buttons and form fields, might need adjustments such as using alternative methods like JavaScript-triggered clicks or more robust waiting mechanisms.
 
 Once these improvements are implemented, the automation process should run more efficiently, allowing the seamless extraction of package stats in CSV format without manual intervention.
+
+![Ideal Automation Flow](./images/Ideal%20Automation%20Flow.jpg)
